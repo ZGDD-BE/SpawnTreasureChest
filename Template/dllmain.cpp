@@ -21,11 +21,11 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     return TRUE;
 }
 
-extern void PluginInit();
+extern void entry();
 
 extern "C" {
     _declspec(dllexport) void onPostInit() {
         std::ios::sync_with_stdio(false);
-        PluginInit();
+        entry();
     }
 }
