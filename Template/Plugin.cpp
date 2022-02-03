@@ -13,7 +13,7 @@
 #include <MC/BlockActor.hpp>
 #include <random>
 Logger Tc("TreasureChest");
-int a = 1;
+int a = 0;
 //{"Findable":0b,"Items":[],"id":"Chest","isMovable":1b,"x":-328,"y":69,"z":-333}
 //{"Findable":1b,"Items":[],"LootTable":"loot_tables/chests/pillager_outpost.json","LootTableSeed":879397998,"id":"Chest","isMovable":1b,"x":-2218,"y":77,"z":425}
 void entry()
@@ -38,14 +38,18 @@ void entry()
 THook(void, "?tick@ServerLevel@@UEAAXXZ",
 	void* _this)
 {
-	a++;
+	a+=1;
 	Tc.info("{}",a);
 	if (Level::getAllPlayers().size() != 0 && a%200 == 0)
 	{
-		for (Player *pl:Level::getAllPlayers())
-		{
-			BlockPos pos = pl->getPosition();
-			Level::setBlock(pos, 0, "minecraft:chest", 54);
+			BlockPos pos = BlockPos::BlockPos(106,63,114);
+			Block *bl = Level::getBlock(pos, 0);
+			if (bl->getTypeName() == "minecraft:air")
+			{
+				Tc.warn(pos.toString() + " " + "此处未加载！");
+				return original(_this);
+			}
+			Level::setBlock(pos, 0, "minecraft:chest", 1);
 			BlockSource* bs = Level::getBlockSource(0);
 			BlockActor* blac = Level::getBlockEntity(pos, bs);
 			auto nbt = blac->getNbt();
@@ -55,7 +59,8 @@ THook(void, "?tick@ServerLevel@@UEAAXXZ",
 				nbt->putInt("LootTableSeed", e());
 			}
 			blac->setNbt(nbt->asCompoundTag());
-		}
 	}
+	if (a >= 2000)
+		a = 0;
 	return original(_this);
 }
