@@ -9,10 +9,28 @@
 #include <MC/Player.hpp>
 #include <MC/ItemStack.hpp>
 #include <LLAPI.h>
+#include <MC/Player.hpp>
+#include <MC/BlockActor.hpp>
+#include <random>
+Logger Tc("TreasureChest");
 
-Logger logger("PluginName");
-
+//{"Findable":0b,"Items":[],"id":"Chest","isMovable":1b,"x":-328,"y":69,"z":-333}
+//{"Findable":1b,"Items":[],"LootTable":"loot_tables/chests/pillager_outpost.json","LootTableSeed":879397998,"id":"Chest","isMovable":1b,"x":-2218,"y":77,"z":425}
 void entry()
 {
-	LL::registerPlugin("PluginName", "Introduction", LL::Version(1, 0, 0));
+	LL::registerPlugin("TreasureChest", "TreasureChest", LL::Version(1, 0, 0));
+	Event::PlayerChatEvent::subscribe([](Event::PlayerChatEvent e)-> bool {//use to test
+		BlockPos pos = e.mPlayer->getPosition();
+		Level::setBlock(pos, 0, "minecraft:chest", 54);
+		BlockSource *bs = Level::getBlockSource(0);
+		BlockActor *blac = Level::getBlockEntity(pos, bs);
+		auto nbt = blac->getNbt();
+        {
+			std::default_random_engine e(time(0));
+			nbt->putString("LootTable", "loot_tables/chests/pillager_outpost.json");
+			nbt->putInt("LootTableSeed",e());
+        }
+		blac->setNbt(nbt->asCompoundTag());
+		return true;
+		});
 }
