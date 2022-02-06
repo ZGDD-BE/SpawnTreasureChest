@@ -19,8 +19,9 @@ int a = 0;
 #include <MC/Dimension.hpp>
 json config;
 map<string, int>times;
+std::default_random_engine e(time(0));
 json readConfigJson() {
-	std::ifstream i("plugins/dofes/file.json");
+	std::ifstream i("plugins/TreasureChest/config.json");
 	json j;
 	i >> j;
 	return j;
@@ -52,26 +53,26 @@ void entry()
 				continue;
 			}
 			times[element.key()] = time1;
+			//Tc.info << times[element.key()] << Tc.endl;
 	}
-	Event::PlayerChatEvent::subscribe([](Event::PlayerChatEvent e)-> bool {//use to test
-		BlockPos pos = e.mPlayer->getPosition();
-		Level::setBlock(pos, 0, "minecraft:chest", 54);
-		BlockSource *bs = Level::getBlockSource(0);
-		BlockActor *blac = Level::getBlockEntity(pos, bs);
-		auto nbt = blac->getNbt();
-        {
-			std::default_random_engine e(time(0));
-			nbt->putString("LootTable", "loot_tables/chests/pillager_outpost.json");
-			nbt->putInt("LootTableSeed",e());
-        }
-		blac->setNbt(nbt->asCompoundTag());
-		return true;
-		});
+	//Event::PlayerChatEvent::subscribe([](Event::PlayerChatEvent e)-> bool {//use to test
+	//	BlockPos pos = e.mPlayer->getPosition();
+	//	Level::setBlock(pos, 0, "minecraft:chest", 54);
+	//	BlockSource *bs = Level::getBlockSource(0);
+	//	BlockActor *blac = Level::getBlockEntity(pos, bs);
+	//	auto nbt = blac->getNbt();
+ //       {
+	//		std::default_random_engine e(time(0));
+	//		nbt->putString("LootTable", "loot_tables/chests/pillager_outpost.json");
+	//		nbt->putInt("LootTableSeed",e());
+ //       }
+	//	blac->setNbt(nbt->asCompoundTag());
+	//	return true;
+	//	});
 }
 
 bool SpawnChest(BlockPos pos,string path,int dim) {
-	Block* bl = Level::getBlock(pos, dim);
-	if (bl->getTypeName() == "minecraft:air")
+	if (Level::getBlockEx(pos,dim) == nullptr)
 	{
 		Tc.warn(pos.toString() + " " + "此处未加载！");
 		return false;
@@ -81,7 +82,6 @@ bool SpawnChest(BlockPos pos,string path,int dim) {
 	BlockActor* blac = Level::getBlockEntity(pos, bs);
 	auto nbt = blac->getNbt();
 	{
-		std::default_random_engine e(time(0));
 		nbt->putString("LootTable", path);
 		nbt->putInt("LootTableSeed", e());
 	}
@@ -96,7 +96,9 @@ THook(void, "?tick@ServerLevel@@UEAAXXZ",
 	int x, y, z, dim, sort = 0;
 	string path;
 	BlockPos pos;
-	for (json::iterator element = config.begin(); element != config.end(); ++element) {
+	json::iterator element;
+	for (element = config.begin(); element != config.end(); ++element) {
+		//Tc.info << element.key() << Tc.endl;
 		if (times[element.key()] != 0 && a % (times[element.key()] * 60 * 10) == 0)
 		{
 			x = element.value()["x"];
@@ -107,8 +109,9 @@ THook(void, "?tick@ServerLevel@@UEAAXXZ",
 			pos = BlockPos(x, y, z);
 			SpawnChest(pos, path, dim);
 		}
-		if (a >= 20000)
+		if (a >= 200000)
 			a = 0;
-		return original(_this);
+		//return original(_this);
 	}
+	return original(_this);
 }
