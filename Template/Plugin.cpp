@@ -12,14 +12,20 @@
 #include <MC/Player.hpp>
 #include <MC/BlockActor.hpp>
 #include <random>
-#include "json.hpp"
+#include <Nlohmann/json.hpp>
+#include <RegCommandAPI.h>
+#include <MC/Dimension.hpp>
+
+using namespace RegisterCommandHelper;
 using json = nlohmann::json;
 Logger Tc("TreasureChest");
 int a = 0;
-#include <MC/Dimension.hpp>
+
 json config;
 map<string, int>times;
 std::default_random_engine e(time(0));
+
+//读取Config配置文件
 json readConfigJson() {
 	std::ifstream i("plugins/TreasureChest/config.json");
 	json j;
@@ -29,6 +35,60 @@ json readConfigJson() {
 
 //{"Findable":0b,"Items":[],"id":"Chest","isMovable":1b,"x":-328,"y":69,"z":-333}
 //{"Findable":1b,"Items":[],"LootTable":"loot_tables/chests/pillager_outpost.json","LootTableSeed":879397998,"id":"Chest","isMovable":1b,"x":-2218,"y":77,"z":425}
+
+//注册指令
+class TreasureChestCommand : public Command {
+	enum TreasureChestOP :int {
+		refresh = 1,
+	} op;
+public:
+	void execute(CommandOrigin const& ori, CommandOutput& output) const override {//执行部分
+		switch (op) {
+			case refresh:
+				config = readConfigJson();
+				int x, y, z, dim, time1;
+				string path;
+				bool success = true;
+				for (json::iterator element = config.begin(); element != config.end(); ++element) {
+					Tc.info << element.key() << " : " << element.value() << Tc.endl;
+					try
+					{
+						x = element.value()["x"];
+						y = element.value()["y"];
+						z = element.value()["z"];
+						dim = element.value()["dim"];
+						path = element.value()["path"];
+						time1 = element.value()["time"];
+					}
+					catch (std::exception&)
+					{
+						success = false;
+						output.error("Incomplete configuration items exist: " + element.key() + "!");
+						times[element.key()] = 0;
+						continue;
+					}
+					times[element.key()] = time1;
+				}
+				if (success) {
+					output.addMessage("refresh TreasureChest config success.");
+				}
+				
+				break;
+		}
+	}
+
+	static void setup(CommandRegistry* registry) {//注册部分(推荐做法)
+		registry->registerCommand("trchest", "TreasureChest Command", CommandPermissionLevel::GameMasters, { (CommandFlagValue)0 }, { (CommandFlagValue)0x80 });
+		registry->addEnum<TreasureChestOP>("TreasureChest1", {{ "refrush",TreasureChestOP::refresh}});
+
+		registry->registerOverload<TreasureChestCommand>(
+			"trchest",
+			makeMandatory<CommandParameterDataType::ENUM>(&TreasureChestCommand::op, "optional", "TreasureChest1")
+			);
+
+	}
+};
+
 void entry()
 {
 	LL::registerPlugin("TreasureChest", "TreasureChest", LL::Version(1, 0, 0));
@@ -48,7 +108,7 @@ void entry()
 			}
 			catch (std::exception&)
 			{
-				Tc.error("存在不完整的配置项目: " + element.key() + "!");
+				Tc.error("Incomplete configuration items exist: " + element.key() + "!");
 				times[element.key()] = 0;
 				continue;
 			}
@@ -69,12 +129,17 @@ void entry()
 	//	blac->setNbt(nbt->asCompoundTag());
 	//	return true;
 	//	});
+
+	Event::RegCmdEvent::subscribe([](Event::RegCmdEvent ev) {
+		TreasureChestCommand::setup(ev.mCommandRegistry);
+		return true;
+	});
 }
 
 bool SpawnChest(BlockPos pos,string path,int dim) {
 	if (Level::getBlockEx(pos,dim) == nullptr)
 	{
-		Tc.warn(pos.toString() + " " + "此处未加载！");
+		Tc.warn("Pos ("+pos.toString() + ") are not loaded!");
 		return false;
 	}
 	Level::setBlock(pos, dim, "minecraft:chest", 1);
