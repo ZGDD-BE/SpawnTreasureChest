@@ -1,0 +1,10 @@
+{
+  "pillager_outpost": {
+    "x": 100,
+    "y": 100,
+    "z": 100,
+    "dim": 0,
+    "time": 1,
+    "path": "loot_tables/chests/pillager_outpost.json"
+  }
+}
