@@ -15,6 +15,7 @@
 #include <Nlohmann/json.hpp>
 #include <RegCommandAPI.h>
 #include <MC/Dimension.hpp>
+#include <windows.h>
 
 using namespace RegisterCommandHelper;
 using json = nlohmann::json;
@@ -25,9 +26,21 @@ json config;
 map<string, int>times;
 std::default_random_engine e(time(0));
 
+//判断文件是否存在
+bool isFileExists_ifstream(string& name) {
+	std::ifstream f(name.c_str());
+	return f.good();
+}
+
 //读取Config配置文件
 json readConfigJson() {
-	std::ifstream i("plugins/TreasureChest/config.json");
+	string filePath = "plugins/TreasureChest/config.json";
+	if (!isFileExists_ifstream(filePath)) {
+		Tc.warn("The file \""+filePath+"\" does not exist.");
+		json j = {};
+		return j;
+	}
+	std::ifstream i(filePath.c_str());
 	json j;
 	i >> j;
 	return j;
@@ -39,12 +52,12 @@ json readConfigJson() {
 //注册指令
 class TreasureChestCommand : public Command {
 	enum TreasureChestOP :int {
-		refresh = 1,
+		reload = 1,
 	} op;
 public:
 	void execute(CommandOrigin const& ori, CommandOutput& output) const override {//执行部分
 		switch (op) {
-			case refresh:
+			case reload:
 				config = readConfigJson();
 				int x, y, z, dim, time1;
 				string path;
@@ -70,7 +83,7 @@ public:
 					times[element.key()] = time1;
 				}
 				if (success) {
-					output.addMessage("refresh TreasureChest config success.");
+					output.success("refresh TreasureChest config success.");
 				}
 				
 				break;
@@ -79,7 +92,7 @@ public:
 
 	static void setup(CommandRegistry* registry) {//注册部分(推荐做法)
 		registry->registerCommand("trchest", "TreasureChest Command", CommandPermissionLevel::GameMasters, { (CommandFlagValue)0 }, { (CommandFlagValue)0x80 });
-		registry->addEnum<TreasureChestOP>("TreasureChest1", {{ "refrush",TreasureChestOP::refresh}});
+		registry->addEnum<TreasureChestOP>("TreasureChest1", {{ "reload",TreasureChestOP::reload}});
 
 		registry->registerOverload<TreasureChestCommand>(
 			"trchest",
